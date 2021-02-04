@@ -1,0 +1,1 @@
+python %0\..\examples\vn_trader\run.py
