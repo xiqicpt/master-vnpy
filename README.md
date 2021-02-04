@@ -1,6 +1,6 @@
 <!-- toc -->
 
-- [VNPY_ENV](#VNPY_ENV)
+- [VNPY-MASTER](#VNPY_MASTER)
   - [PreRequirement](#PreRequirement)
   - [Python 環境建立](#Python環境建立)
   - [安裝 TA-Lib](#安裝TA-Lib)
@@ -10,7 +10,9 @@
 
 <!-- /toc -->
 
-# VNPY_ENV
+# VNPY_MASTER
+
+此Github是根據課程[Python 量化交易 VNPY 大師班](https://mastertalks.tw/products/vnpy?ref=MAXCHEN)所建立，提供學生能夠有順序的安裝並上手 VN.PY 這個完整的交易系統，建立自己的交易環境。
 
 [VNPY](https://github.com/vnpy/vnpy) platform with [Shioaji](https://sinotrade.github.io/)
 
@@ -83,31 +85,14 @@ VNPY 僅支援python 64bits 3.7+，先安裝好 Python(Anaconda) 虛擬環境
 
 ## VNPY安裝
 
-> Shioaji 特別版
->
-> 1. 下載VNPY_Shioaji檔案，並使用SinopacGate branch
->
->    ```
->    (vnpy_env) C:\Users\xiqi\vnpy_demo>git clone https://www.github.com/ypochien/vnpy
->    ```
->
-> 2. Check SinopacGateway
->
->    若沒做這步直接安裝會沒有Sinopac接口
->
->    ```powershell
->    (vnpy_env) C:\Users\xiqi\vnpy_demo>cd vnpy
->    (vnpy_env) C:\Users\xiqi\vnpy_demo\vnpy>git checkout SinopacGateway
->    ```
->
 > ***使用此github，可以直接進行Install***
 >
 > 1. Install VNPY
 >
 >    1. Window
->
+> 
 >       ```powershell
->       (vnpy_env) C:\Users\xiqi\vnpy_demo\vnpy>install.bat
+>      (vnpy_env) C:\Users\xiqi\vnpy_demo\vnpy>install.bat
 >       ```
 >
 >    2. Linux
@@ -115,12 +100,12 @@ VNPY 僅支援python 64bits 3.7+，先安裝好 Python(Anaconda) 虛擬環境
 >       ```powershell
 >       (vnpy_env) C:\Users\xiqi\vnpy_demo\vnpy>./install.sh
 >       ```
->
->    3. OSX
->
->       ```powershell
+> 
+>   3. OSX
+> 
+>      ```powershell
 >       (vnpy_env) USERNAMEAir:vnpy xiqi>./install_osx.sh
->       ```
+>      ```
 
 ## VNPY執行
 
