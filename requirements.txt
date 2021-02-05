@@ -27,3 +27,6 @@ wmi
 QScintilla
 plotly
 shioaji
+jupyter
+notebook
+autopep8
