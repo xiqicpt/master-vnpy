@@ -1,6 +1,6 @@
 <!-- toc -->
 
-- [VNPY-MASTER](#VNPY_MASTER)
+- [master-vnpy](#master-vnpy)
   - [PreRequirement](#PreRequirement)
   - [Python 環境建立](#Python環境建立)
   - [安裝 TA-Lib](#安裝TA-Lib)
@@ -10,7 +10,7 @@
 
 <!-- /toc -->
 
-# VNPY_MASTER
+# master-vnpy
 
 此Github是根據課程[Python 量化交易 VNPY 大師班](https://mastertalks.tw/products/vnpy?ref=MAXCHEN)所建立，提供學生能夠有順序的安裝並上手 VN.PY 這個完整的交易系統，建立自己的交易環境。
 
@@ -92,7 +92,7 @@ VNPY 僅支援python 64bits 3.7+，先安裝好 Python(Anaconda) 虛擬環境
 >    1. Window
 > 
 >       ```powershell
->      (vnpy_env) C:\Users\xiqi\vnpy_demo\vnpy>install.bat
+>        (vnpy_env) C:\Users\xiqi\vnpy_demo\vnpy>install.bat
 >       ```
 >
 >    2. Linux
