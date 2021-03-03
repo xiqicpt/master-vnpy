@@ -1217,7 +1217,7 @@ class DailyResult:
 
             self.turnover += turnover
             if isinstance(rate, Callable):
-                self.commission += rate(cost=trade.price, multiplier=size, qty=trade.volume)
+                self.commission += rate(cost=trade.price, multiplier=size, qty=trade.volume, direction=trade.direction)
             else:
                 self.commission += turnover * rate
 
