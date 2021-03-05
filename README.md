@@ -22,7 +22,7 @@
 
 > [Python 3.7+](https://www.python.org/)  or ([Anaconda with Python 3.7+](https://www.anaconda.com/products/individual))
 >
-> MongoDB : [Community](https://www.mongodb.com/) [Cloud](https://www.mongodb.com/cloud/atlas/lp/try2?utm_source=google&utm_campaign=gs_apac_taiwan_search_brand_atlas_desktop&utm_term=mongodb&utm_medium=cpc_paid_search&utm_ad=e&gclid=CjwKCAjwx9_4BRAHEiwApAt0zrYtmb8BvZfMxkfbiv7Wh6yKCYP2BdE7MpuG4zObl-ftgE3N8rd6qBoCbsAQAvD_BwE)
+> MongoDB : [Community](https://www.mongodb.com/try/download/community) [Cloud](https://www.mongodb.com/cloud/atlas/lp/try2?utm_source=google&utm_campaign=gs_apac_taiwan_search_brand_atlas_desktop&utm_term=mongodb&utm_medium=cpc_paid_search&utm_ad=e&gclid=CjwKCAjwx9_4BRAHEiwApAt0zrYtmb8BvZfMxkfbiv7Wh6yKCYP2BdE7MpuG4zObl-ftgE3N8rd6qBoCbsAQAvD_BwE)
 >
 > [Git Bash](https://git-scm.com/) or [Github Desktop](https://desktop.github.com/)
 
