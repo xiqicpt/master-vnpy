@@ -605,35 +605,38 @@ class BacktestingEngine:
 
         # Use multiprocessing pool for running backtesting with different setting
         # Force to use spawn method to create new process (instead of fork on Linux)
-        ctx = multiprocessing.get_context("spawn")
-        pool = ctx.Pool(multiprocessing.cpu_count())
+        # ctx = multiprocessing.get_context("spawn")
+        # pool = ctx.Pool(multiprocessing.cpu_count())
+        from concurrent.futures import ThreadPoolExecutor
 
         results = []
-        for setting in settings:
-            result = (pool.apply_async(optimize, (
-                target_name,
-                self.strategy_class,
-                setting,
-                self.vt_symbol,
-                self.interval,
-                self.start,
-                self.rate,
-                self.slippage,
-                self.size,
-                self.pricetick,
-                self.capital,
-                self.end,
-                self.mode,
-                self.inverse,
-                self.collection_name
-            )))
-            results.append(result)
+        with ThreadPoolExecutor(10) as executor:
+            for setting in settings:
+                result = executor.submit(optimize,
+                    target_name,
+                    self.strategy_class,
+                    setting,
+                    self.vt_symbol,
+                    self.interval,
+                    self.start,
+                    self.rate,
+                    self.slippage,
+                    self.size,
+                    self.pricetick,
+                    self.capital,
+                    self.end,
+                    self.mode,
+                    self.inverse,
+                    self.collection_name
+                )
+                results.append(result)
 
-        pool.close()
-        pool.join()
+        # pool.close()
+        # pool.join()
 
         # Sort results and output
-        result_values = [result.get() for result in results]
+        # result_values = [result.get() for result in results]
+        result_values = [exe.result() for exe in results]
         result_values.sort(reverse=True, key=lambda result: result[1])
 
         if output:
