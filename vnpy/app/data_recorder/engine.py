@@ -68,7 +68,7 @@ class RecorderEngine(BaseEngine):
             try:
                 task = self.queue.get(timeout=1)
                 task_type, data = task
-                print(f'in RecorderEngine.run, {task_type}, {data}')
+
                 if task_type == "tick":
                     database_manager.save_tick_data([data])
                 elif task_type == "bar":
@@ -180,8 +180,7 @@ class RecorderEngine(BaseEngine):
         """"""
         self.event_engine.register(EVENT_TICK, self.process_tick_event)
         self.event_engine.register(EVENT_CONTRACT, self.process_contract_event)
-        self.event_engine.register(
-            EVENT_SPREAD_DATA, self.process_spread_event)
+        self.event_engine.register(EVENT_SPREAD_DATA, self.process_spread_event)
 
     def update_tick(self, tick: TickData):
         """"""

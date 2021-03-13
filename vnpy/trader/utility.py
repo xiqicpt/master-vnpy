@@ -6,7 +6,7 @@ import json
 import logging
 import sys
 from pathlib import Path
-from typing import Callable, Dict, Tuple, Union
+from typing import Callable, Dict, Tuple, Union, Optional
 from decimal import Decimal
 from math import floor, ceil
 
@@ -153,11 +153,14 @@ def get_digits(value: float) -> int:
     """
     value_str = str(value)
 
-    if "." not in value_str:
-        return 0
-    else:
+    if "e-" in value_str:
+        _, buf = value_str.split("e-")
+        return int(buf)
+    elif "." in value_str:
         _, buf = value_str.split(".")
         return len(buf)
+    else:
+        return 0
 
 
 class BarGenerator:
@@ -185,6 +188,8 @@ class BarGenerator:
         self.interval: Interval = interval
         self.interval_count: int = 0
 
+        self.hour_bar: BarData = None
+
         self.window: int = window
         self.window_bar: BarData = None
         self.on_window_bar: Callable = on_window_bar
@@ -208,7 +213,10 @@ class BarGenerator:
 
         if not self.bar:
             new_minute = True
-        elif self.bar.datetime.minute != tick.datetime.minute:
+        elif (
+            (self.bar.datetime.minute != tick.datetime.minute)
+            or (self.bar.datetime.hour != tick.datetime.hour)
+        ):
             self.bar.datetime = self.bar.datetime.replace(
                 second=0, microsecond=0
             )
@@ -231,7 +239,13 @@ class BarGenerator:
             )
         else:
             self.bar.high_price = max(self.bar.high_price, tick.last_price)
+            if tick.high_price > self.last_tick.high_price:
+                self.bar.high_price = max(self.bar.high_price, tick.high_price)
+
             self.bar.low_price = min(self.bar.low_price, tick.last_price)
+            if tick.low_price < self.last_tick.low_price:
+                self.bar.low_price = min(self.bar.low_price, tick.low_price)
+
             self.bar.close_price = tick.last_price
             self.bar.open_interest = tick.open_interest
             self.bar.datetime = tick.datetime
@@ -246,14 +260,16 @@ class BarGenerator:
         """
         Update 1 minute bar into generator
         """
-        # If not inited, creaate window bar object
-        if not self.window_bar:
-            # Generate timestamp for bar data
-            if self.interval == Interval.MINUTE:
-                dt = bar.datetime.replace(second=0, microsecond=0)
-            else:
-                dt = bar.datetime.replace(minute=0, second=0, microsecond=0)
+        if self.interval == Interval.MINUTE:
+            self.update_bar_minute_window(bar)
+        else:
+            self.update_bar_hour_window(bar)
 
+    def update_bar_minute_window(self, bar: BarData) -> None:
+        """"""
+        # If not inited, create window bar object
+        if not self.window_bar:
+            dt = bar.datetime.replace(second=0, microsecond=0)
             self.window_bar = BarData(
                 symbol=bar.symbol,
                 exchange=bar.exchange,
@@ -266,9 +282,13 @@ class BarGenerator:
         # Otherwise, update high/low price into window bar
         else:
             self.window_bar.high_price = max(
-                self.window_bar.high_price, bar.high_price)
+                self.window_bar.high_price,
+                bar.high_price
+            )
             self.window_bar.low_price = min(
-                self.window_bar.low_price, bar.low_price)
+                self.window_bar.low_price,
+                bar.low_price
+            )
 
         # Update close price/volume into window bar
         self.window_bar.close_price = bar.close_price
@@ -276,33 +296,121 @@ class BarGenerator:
         self.window_bar.open_interest = bar.open_interest
 
         # Check if window bar completed
-        finished = False
-
-        if self.interval == Interval.MINUTE:
-            # x-minute bar
-            if not (bar.datetime.minute + 1) % self.window:
-                finished = True
-        elif self.interval == Interval.HOUR:
-            if self.last_bar and bar.datetime.hour != self.last_bar.datetime.hour:
-                # 1-hour bar
-                if self.window == 1:
-                    finished = True
-                # x-hour bar
-                else:
-                    self.interval_count += 1
-
-                    if not self.interval_count % self.window:
-                        finished = True
-                        self.interval_count = 0
-
-        if finished:
+        if not (bar.datetime.minute + 1) % self.window:
             self.on_window_bar(self.window_bar)
             self.window_bar = None
 
         # Cache last bar object
         self.last_bar = bar
 
-    def generate(self) -> None:
+    def update_bar_hour_window(self, bar: BarData) -> None:
+        """"""
+        # If not inited, create window bar object
+        if not self.hour_bar:
+            dt = bar.datetime.replace(minute=0, second=0, microsecond=0)
+            self.hour_bar = BarData(
+                symbol=bar.symbol,
+                exchange=bar.exchange,
+                datetime=dt,
+                gateway_name=bar.gateway_name,
+                open_price=bar.open_price,
+                high_price=bar.high_price,
+                low_price=bar.low_price
+            )
+            return
+
+        finished_bar = None
+
+        # If minute is 59, update minute bar into window bar and push
+        if bar.datetime.minute == 59:
+            self.hour_bar.high_price = max(
+                self.hour_bar.high_price,
+                bar.high_price
+            )
+            self.hour_bar.low_price = min(
+                self.hour_bar.low_price,
+                bar.low_price
+            )
+
+            self.hour_bar.close_price = bar.close_price
+            self.hour_bar.volume += int(bar.volume)
+            self.hour_bar.open_interest = bar.open_interest
+
+            finished_bar = self.hour_bar
+            self.hour_bar = None
+
+        # If minute bar of new hour, then push existing window bar
+        elif bar.datetime.hour != self.hour_bar.datetime.hour:
+            finished_bar = self.hour_bar
+
+            dt = bar.datetime.replace(minute=0, second=0, microsecond=0)
+            self.hour_bar = BarData(
+                symbol=bar.symbol,
+                exchange=bar.exchange,
+                datetime=dt,
+                gateway_name=bar.gateway_name,
+                open_price=bar.open_price,
+                high_price=bar.high_price,
+                low_price=bar.low_price
+            )
+        # Otherwise only update minute bar
+        else:
+            self.hour_bar.high_price = max(
+                self.hour_bar.high_price,
+                bar.high_price
+            )
+            self.hour_bar.low_price = min(
+                self.hour_bar.low_price,
+                bar.low_price
+            )
+
+            self.hour_bar.close_price = bar.close_price
+            self.hour_bar.volume += int(bar.volume)
+            self.hour_bar.open_interest = bar.open_interest
+
+        # Push finished window bar
+        if finished_bar:
+            self.on_hour_bar(finished_bar)
+
+        # Cache last bar object
+        self.last_bar = bar
+
+    def on_hour_bar(self, bar: BarData) -> None:
+        """"""
+        if self.window == 1:
+            self.on_window_bar(bar)
+        else:
+            if not self.window_bar:
+                self.window_bar = BarData(
+                    symbol=bar.symbol,
+                    exchange=bar.exchange,
+                    datetime=bar.datetime,
+                    gateway_name=bar.gateway_name,
+                    open_price=bar.open_price,
+                    high_price=bar.high_price,
+                    low_price=bar.low_price
+                )
+            else:
+                self.window_bar.high_price = max(
+                    self.window_bar.high_price,
+                    bar.high_price
+                )
+                self.window_bar.low_price = min(
+                    self.window_bar.low_price,
+                    bar.low_price
+                )
+
+                self.window_bar.close_price = bar.close_price
+                self.window_bar.volume += int(bar.volume)
+                self.window_bar.open_interest = bar.open_interest
+
+            self.interval_count += 1
+            if not self.interval_count % self.window:
+                self.interval_count = 0
+                self.on_window_bar(self.window_bar)
+                self.window_bar = None
+
+    def generate(self) -> Optional[BarData]:
         """
         Generate the bar data and call callback immediately.
         """
@@ -436,11 +544,17 @@ class ArrayManager(object):
             return result
         return result[-1]
 
-    def apo(self, n: int, array: bool = False) -> Union[float, np.ndarray]:
+    def apo(
+        self,
+        fast_period: int,
+        slow_period: int,
+        matype: int = 0,
+        array: bool = False
+    ) -> Union[float, np.ndarray]:
         """
         APO.
         """
-        result = talib.APO(self.close, n)
+        result = talib.APO(self.close, fast_period, slow_period, matype)
         if array:
             return result
         return result[-1]
@@ -463,11 +577,17 @@ class ArrayManager(object):
             return result
         return result[-1]
 
-    def ppo(self, n: int, array: bool = False) -> Union[float, np.ndarray]:
+    def ppo(
+        self,
+        fast_period: int,
+        slow_period: int,
+        matype: int = 0,
+        array: bool = False
+    ) -> Union[float, np.ndarray]:
         """
         PPO.
         """
-        result = talib.PPO(self.close, n)
+        result = talib.PPO(self.close, fast_period, slow_period, matype)
         if array:
             return result
         return result[-1]
@@ -517,16 +637,16 @@ class ArrayManager(object):
             return result
         return result[-1]
 
-    def std(self, n: int, array: bool = False) -> Union[float, np.ndarray]:
+    def std(self, n: int, nbdev: int = 1, array: bool = False) -> Union[float, np.ndarray]:
         """
         Standard deviation.
         """
-        result = talib.STDDEV(self.close, n)
+        result = talib.STDDEV(self.close, n, nbdev)
         if array:
             return result
         return result[-1]
 
-    def obv(self, n: int, array: bool = False) -> Union[float, np.ndarray]:
+    def obv(self, array: bool = False) -> Union[float, np.ndarray]:
         """
         OBV.
         """
@@ -645,11 +765,17 @@ class ArrayManager(object):
             return result
         return result[-1]
 
-    def ultosc(self, array: bool = False) -> Union[float, np.ndarray]:
+    def ultosc(
+        self,
+        time_period1: int = 7,
+        time_period2: int = 14,
+        time_period3: int = 28,
+        array: bool = False
+    ) -> Union[float, np.ndarray]:
         """
         Ultimate Oscillator.
         """
-        result = talib.ULTOSC(self.high, self.low, self.close)
+        result = talib.ULTOSC(self.high, self.low, self.close, time_period1, time_period2, time_period3)
         if array:
             return result
         return result[-1]
@@ -676,7 +802,7 @@ class ArrayManager(object):
         Bollinger Channel.
         """
         mid = self.sma(n, array)
-        std = self.std(n, array)
+        std = self.std(n, 1, array)
 
         up = mid + std * dev
         down = mid - std * dev
@@ -775,20 +901,25 @@ class ArrayManager(object):
             return result
         return result[-1]
 
-    def ad(self, n: int, array: bool = False) -> Union[float, np.ndarray]:
+    def ad(self, array: bool = False) -> Union[float, np.ndarray]:
         """
         AD.
         """
-        result = talib.AD(self.high, self.low, self.close, self.volume, n)
+        result = talib.AD(self.high, self.low, self.close, self.volume)
         if array:
             return result
         return result[-1]
 
-    def adosc(self, n: int, array: bool = False) -> Union[float, np.ndarray]:
+    def adosc(
+        self,
+        fast_period: int,
+        slow_period: int,
+        array: bool = False
+    ) -> Union[float, np.ndarray]:
         """
         ADOSC.
         """
-        result = talib.ADOSC(self.high, self.low, self.close, self.volume, n)
+        result = talib.ADOSC(self.high, self.low, self.close, self.volume, fast_period, slow_period)
         if array:
             return result
         return result[-1]

@@ -1,12 +1,13 @@
 from collections import defaultdict
 from datetime import date, datetime, timedelta
-from typing import Dict, List, Set, Tuple, Callable, TypeVar
+from typing import Dict, List, Set, Tuple
 from functools import lru_cache
+from copy import copy
 import traceback
 
 import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 from pandas import DataFrame
 
 from vnpy.trader.constant import Direction, Offset, Interval, Status
@@ -16,16 +17,13 @@ from vnpy.trader.utility import round_to, extract_vt_symbol
 
 from .template import StrategyTemplate
 
-# Set seaborn style
-sns.set_style("whitegrid")
-
 
 INTERVAL_DELTA_MAP = {
     Interval.MINUTE: timedelta(minutes=1),
     Interval.HOUR: timedelta(hours=1),
     Interval.DAILY: timedelta(days=1),
 }
-multi_type =  TypeVar('multi_type', float, Callable)
+
 
 class BacktestingEngine:
     """"""
@@ -39,11 +37,12 @@ class BacktestingEngine:
         self.end: datetime = None
 
         self.rates: Dict[str, float] = 0
-        self.slippages: Dict[str, multi_type] = 0
+        self.slippages: Dict[str, float] = 0
         self.sizes: Dict[str, float] = 1
-        self.priceticks: Dict[str, multi_type] = 0
+        self.priceticks: Dict[str, float] = 0
 
         self.capital: float = 1_000_000
+        self.risk_free: float = 0.02
 
         self.strategy: StrategyTemplate = None
         self.bars: Dict[str, BarData] = {}
@@ -91,12 +90,12 @@ class BacktestingEngine:
         interval: Interval,
         start: datetime,
         rates: Dict[str, float],
-        slippages: Dict[str, multi_type],
+        slippages: Dict[str, float],
         sizes: Dict[str, float],
-        priceticks: Dict[str, multi_type],
+        priceticks: Dict[str, float],
         capital: int = 0,
         end: datetime = None,
-        collection_name:Dict[str, str] = None
+        risk_free: float = 0
     ) -> None:
         """"""
         self.vt_symbols = vt_symbols
@@ -110,12 +109,12 @@ class BacktestingEngine:
         self.start = start
         self.end = end
         self.capital = capital
-        self.collection_name = collection_name
+        self.risk_free = risk_free
 
     def add_strategy(self, strategy_class: type, setting: dict) -> None:
         """"""
         self.strategy = strategy_class(
-            self, strategy_class.__name__, self.vt_symbols, setting
+            self, strategy_class.__name__, copy(self.vt_symbols), setting
         )
 
     def load_data(self) -> None:
@@ -151,8 +150,7 @@ class BacktestingEngine:
                     vt_symbol,
                     self.interval,
                     start,
-                    end,
-                    self.collection_name[vt_symbol]
+                    end
                 )
 
                 for bar in data:
@@ -350,11 +348,12 @@ class BacktestingEngine:
             return_std = df["return"].std() * 100
 
             if return_std:
-                sharpe_ratio = daily_return / return_std * np.sqrt(240)
+                daily_risk_free = self.risk_free / np.sqrt(240)
+                sharpe_ratio = (daily_return - daily_risk_free) / return_std * np.sqrt(240)
             else:
                 sharpe_ratio = 0
 
-            return_drawdown_ratio = -total_return / max_ddpercent
+            return_drawdown_ratio = -total_net_pnl / max_drawdown
 
         # Output
         if output:
@@ -440,25 +439,37 @@ class BacktestingEngine:
         if df is None:
             return
 
-        plt.figure(figsize=(10, 16))
+        fig = make_subplots(
+            rows=4,
+            cols=1,
+            subplot_titles=["Balance", "Drawdown", "Daily Pnl", "Pnl Distribution"],
+            vertical_spacing=0.06
+        )
 
-        balance_plot = plt.subplot(4, 1, 1)
-        balance_plot.set_title("Balance")
-        df["balance"].plot(legend=True)
+        balance_line = go.Scatter(
+            x=df.index,
+            y=df["balance"],
+            mode="lines",
+            name="Balance"
+        )
+        drawdown_scatter = go.Scatter(
+            x=df.index,
+            y=df["drawdown"],
+            fillcolor="red",
+            fill='tozeroy',
+            mode="lines",
+            name="Drawdown"
+        )
+        pnl_bar = go.Bar(y=df["net_pnl"], name="Daily Pnl")
+        pnl_histogram = go.Histogram(x=df["net_pnl"], nbinsx=100, name="Days")
 
-        drawdown_plot = plt.subplot(4, 1, 2)
-        drawdown_plot.set_title("Drawdown")
-        drawdown_plot.fill_between(range(len(df)), df["drawdown"].values)
+        fig.add_trace(balance_line, row=1, col=1)
+        fig.add_trace(drawdown_scatter, row=2, col=1)
+        fig.add_trace(pnl_bar, row=3, col=1)
+        fig.add_trace(pnl_histogram, row=4, col=1)
 
-        pnl_plot = plt.subplot(4, 1, 3)
-        pnl_plot.set_title("Daily Pnl")
-        df["net_pnl"].plot(kind="bar", legend=False, grid=False, xticks=[])
-
-        distribution_plot = plt.subplot(4, 1, 4)
-        distribution_plot.set_title("Daily Pnl Distribution")
-        df["net_pnl"].hist(bins=50)
-
-        plt.show()
+        fig.update_layout(height=1000, width=1000)
+        fig.show()
 
     def update_daily_close(self, bars: Dict[str, BarData], dt: datetime) -> None:
         """"""
@@ -479,14 +490,28 @@ class BacktestingEngine:
         """"""
         self.datetime = dt
 
-        self.bars.clear()
+        # self.bars.clear()
         for vt_symbol in self.vt_symbols:
             bar = self.history_data.get((dt, vt_symbol), None)
+
+            # If bar data of vt_symbol at dt exists
             if bar:
                 self.bars[vt_symbol] = bar
-            else:
-                dt_str = dt.strftime("%Y-%m-%d %H:%M:%S")
-                self.output(f"数据缺失：{dt_str} {vt_symbol}")
+            # Otherwise, use previous data to backfill
+            elif vt_symbol in self.bars:
+                old_bar = self.bars[vt_symbol]
+
+                bar = BarData(
+                    symbol=old_bar.symbol,
+                    exchange=old_bar.exchange,
+                    datetime=dt,
+                    open_price=old_bar.close_price,
+                    high_price=old_bar.close_price,
+                    low_price=old_bar.close_price,
+                    close_price=old_bar.close_price,
+                    gateway_name=old_bar.gateway_name
+                )
+                self.bars[vt_symbol] = bar
 
         self.cross_limit_order()
         self.strategy.on_bars(self.bars)
@@ -577,10 +602,7 @@ class BacktestingEngine:
         lock: bool
     ) -> List[str]:
         """"""
-        if isinstance(self.priceticks[vt_symbol], Callable):
-            price = round_to(price, self.priceticks[vt_symbol](price))
-        else:
-            price = round_to(price, self.priceticks[vt_symbol])
+        price = round_to(price, self.priceticks[vt_symbol])
         symbol, exchange = extract_vt_symbol(vt_symbol)
 
         self.limit_order_count += 1
@@ -697,8 +719,8 @@ class ContractDailyResult:
         pre_close: float,
         start_pos: float,
         size: int,
-        rate: multi_type,
-        slippage: multi_type
+        rate: float,
+        slippage: float
     ) -> None:
         """"""
         # If no pre_close provided on the first day,
@@ -728,15 +750,9 @@ class ContractDailyResult:
             turnover = trade.volume * size * trade.price
 
             self.trading_pnl += pos_change * (self.close_price - trade.price) * size
-            if isinstance(slippage, Callable):
-                self.slippage += trade.volume * size * slippage(self.pre_close)
-            else:
-                self.slippage += trade.volume * size * slippage
+            self.slippage += trade.volume * size * slippage
             self.turnover += turnover
-            if isinstance(rate, Callable):
-                self.commission += rate(*trade.vt_symbol.split('.'), pre_close, size, trade.volume, direction=self.end_pos)
-            else:
-                self.commission += turnover * rate
+            self.commission += turnover * rate
 
         # Net pnl takes account of commission and slippage cost
         self.total_pnl = self.trading_pnl + self.holding_pnl
@@ -783,7 +799,7 @@ class PortfolioDailyResult:
         start_poses: Dict[str, float],
         sizes: Dict[str, float],
         rates: Dict[str, float],
-        slippages: Dict[str, multi_type],
+        slippages: Dict[str, float],
     ) -> None:
         """"""
         self.pre_closes = pre_closes
@@ -813,8 +829,9 @@ class PortfolioDailyResult:
         self.close_prices = close_prices
 
         for vt_symbol, close_price in close_prices.items():
-            contract_result = self.contract_results[vt_symbol]
-            contract_result.update_close_price(close_price)
+            contract_result = self.contract_results.get(vt_symbol, None)
+            if contract_result:
+                contract_result.update_close_price(close_price)
 
 
 @lru_cache(maxsize=999)
@@ -822,12 +839,11 @@ def load_bar_data(
     vt_symbol: str,
     interval: Interval,
     start: datetime,
-    end: datetime,
-    collection_name:str=None
+    end: datetime
 ):
     """"""
     symbol, exchange = extract_vt_symbol(vt_symbol)
 
     return database_manager.load_bar_data(
-        symbol, exchange, interval, start, end, collection_name
+        symbol, exchange, interval, start, end
     )

@@ -116,6 +116,7 @@ class BacktestingEngine:
         self.size = 1
         self.pricetick = 0
         self.capital = 1_000_000
+        self.risk_free: float = 0.02
         self.mode = BacktestingMode.BAR
         self.inverse = False
 
@@ -145,8 +146,6 @@ class BacktestingEngine:
 
         self.daily_results = {}
         self.daily_df = None
-
-        self.collection_name = None
 
     def clear_data(self):
         """
@@ -179,11 +178,12 @@ class BacktestingEngine:
         rate: float,
         slippage: float,
         size: float,
-        pricetick: [float, Callable],
+        pricetick: float,
         capital: int = 0,
         end: datetime = None,
         mode: BacktestingMode = BacktestingMode.BAR,
         inverse: bool = False,
+        risk_free: float = 0,
         collection_name: str = None
     ):
         """"""
@@ -203,7 +203,7 @@ class BacktestingEngine:
         self.end = end
         self.mode = mode
         self.inverse = inverse
-
+        self.risk_free = risk_free
         self.collection_name = collection_name
 
     def add_strategy(self, strategy_class: type, setting: dict):
@@ -227,8 +227,9 @@ class BacktestingEngine:
         self.history_data.clear()       # Clear previously loaded history data
 
         # Load 30 days of data each time and allow for progress update
-        progress_delta = timedelta(days=30)
-        total_delta = self.end - self.start
+        total_days = (self.end - self.start).days
+        progress_days = max(int(total_days / 10), 1)
+        progress_delta = timedelta(days=progress_days)
         interval_delta = INTERVAL_DELTA_MAP[self.interval]
 
         start = self.start
@@ -236,6 +237,9 @@ class BacktestingEngine:
         progress = 0
 
         while start < self.end:
+            progress_bar = "#" * int(progress * 10 + 1)
+            self.output(f"加载进度：{progress_bar} [{progress:.0%}]")
+
             end = min(end, self.end)  # Make sure end time stays within set range
 
             if self.mode == BacktestingMode.BAR:
@@ -245,7 +249,7 @@ class BacktestingEngine:
                     self.interval,
                     start,
                     end,
-                    self.collection_name
+                    collection_name = self.collection_name
                 )
             else:
                 data = load_tick_data(
@@ -253,18 +257,16 @@ class BacktestingEngine:
                     self.exchange,
                     start,
                     end,
-                    self.collection_name
+                    collection_name = self.collection_name
                 )
 
             self.history_data.extend(data)
 
-            progress += progress_delta / total_delta
+            progress += progress_days / total_days
             progress = min(progress, 1)
-            progress_bar = "#" * int(progress * 10)
-            self.output(f"加载进度：{progress_bar} [{progress:.0%}]")
 
             start = end + interval_delta
-            end += (progress_delta + interval_delta)
+            end += progress_delta
 
         self.output(f"历史数据加载完成，数据量：{len(self.history_data)}")
 
@@ -278,7 +280,7 @@ class BacktestingEngine:
         self.strategy.on_init()
 
         # Use the first [days] of history data for initializing strategy
-        day_count = 0
+        day_count = 1
         ix = 0
 
         for ix, data in enumerate(self.history_data):
@@ -304,14 +306,29 @@ class BacktestingEngine:
         self.output("开始回放历史数据")
 
         # Use the rest of history data for running backtesting
-        for data in self.history_data[ix:]:
-            try:
-                func(data)
-            except Exception:
-                self.output("触发异常，回测终止")
-                self.output(traceback.format_exc())
-                return
+        backtesting_data = self.history_data[ix + 1:]
+        if not backtesting_data:
+            self.output("历史数据不足，回测终止")
+            return
 
+        total_size = len(backtesting_data)
+        batch_size = max(int(total_size / 10), 1)
+
+        for ix, i in enumerate(range(0, total_size, batch_size)):
+            batch_data = backtesting_data[i: i + batch_size]
+            for data in batch_data:
+                try:
+                    func(data)
+                except Exception:
+                    self.output("触发异常，回测终止")
+                    self.output(traceback.format_exc())
+                    return
+
+            progress = min(ix / 10, 1)
+            progress_bar = "=" * (ix + 1)
+            self.output(f"回放进度：{progress_bar} [{progress:.0%}]")
+
+        self.strategy.on_stop()
         self.output("历史数据回放结束")
 
     def calculate_result(self):
@@ -396,7 +413,12 @@ class BacktestingEngine:
         else:
             # Calculate balance related time series data
             df["balance"] = df["net_pnl"].cumsum() + self.capital
-            df["return"] = np.log(df["balance"] / df["balance"].shift(1)).fillna(0)
+
+            # When balance falls below 0, set daily return to 0
+            x = df["balance"] / df["balance"].shift(1)
+            x[x <= 0] = np.nan
+            df["return"] = np.log(x).fillna(0)
+
             df["highlevel"] = (
                 df["balance"].rolling(
                     min_periods=1, window=len(df), center=False).max()
@@ -444,7 +466,8 @@ class BacktestingEngine:
             return_std = df["return"].std() * 100
 
             if return_std:
-                sharpe_ratio = daily_return / return_std * np.sqrt(240)
+                daily_risk_free = self.risk_free / np.sqrt(240)
+                sharpe_ratio = (daily_return - daily_risk_free) / return_std * np.sqrt(240)
             else:
                 sharpe_ratio = 0
 
@@ -621,6 +644,9 @@ class BacktestingEngine:
 
     def run_ga_optimization(self, optimization_setting: OptimizationSetting, population_size=100, ngen_size=30, output=True):
         """"""
+        # Clear lru_cache before running ga optimization
+        _ga_optimize.cache_clear()
+
         # Get optimization setting and target
         settings = optimization_setting.generate_setting_ga()
         target_name = optimization_setting.target_name
@@ -662,7 +688,6 @@ class BacktestingEngine:
         global ga_end
         global ga_mode
         global ga_inverse
-        global ga_collection_name
 
         ga_target_name = target_name
         ga_strategy_class = self.strategy_class
@@ -678,9 +703,8 @@ class BacktestingEngine:
         ga_end = self.end
         ga_mode = self.mode
         ga_inverse = self.inverse
-        ga_collection_name = self.collection_name
 
-        # Set up genetic algorithem
+        # Set up genetic algorithm
         toolbox = base.Toolbox()
         toolbox.register("individual", tools.initIterate, creator.Individual, generate_parameter)
         toolbox.register("population", tools.initRepeat, list, toolbox.individual)
@@ -894,6 +918,7 @@ class BacktestingEngine:
                 offset=stop_order.offset,
                 price=stop_order.price,
                 volume=stop_order.volume,
+                traded=stop_order.volume,
                 status=Status.ALLTRADED,
                 gateway_name=self.gateway_name,
                 datetime=self.datetime
@@ -968,7 +993,7 @@ class BacktestingEngine:
         lock: bool
     ):
         """"""
-        if isinstance(self.pricetick, Callable):
+        if callable(self.pricetick):
             price = round_to(price, self.pricetick(price))
         else:
             price = round_to(price, self.pricetick)
@@ -1165,7 +1190,7 @@ class DailyResult:
         pre_close: float,
         start_pos: float,
         size: int,
-        rate: [float, Callable],
+        rate: float,
         slippage: float,
         inverse: bool
     ):
@@ -1199,7 +1224,7 @@ class DailyResult:
 
             self.end_pos += pos_change
             
-            if isinstance(slippage, Callable):
+            if callable(slippage): # For Taiwan Stock Market
                 slippage = slippage(trade.price)
 
             # For normal contract
@@ -1216,7 +1241,7 @@ class DailyResult:
                 self.slippage += trade.volume * size * slippage / (trade.price ** 2)
 
             self.turnover += turnover
-            if isinstance(rate, Callable):
+            if callable(rate): # For Taiwan Stock Market
                 self.commission += rate(cost=trade.price, multiplier=size, qty=trade.volume, direction=trade.direction)
             else:
                 self.commission += turnover * rate
@@ -1233,15 +1258,14 @@ def optimize(
     vt_symbol: str,
     interval: Interval,
     start: datetime,
-    rate: [float, Callable],
+    rate: float,
     slippage: float,
     size: float,
-    pricetick: [float, Callable],
+    pricetick: float,
     capital: int,
     end: datetime,
     mode: BacktestingMode,
-    inverse: bool,
-    collection_name: str = None
+    inverse: bool
 ):
     """
     Function for running in multiprocessing.pool
@@ -1259,8 +1283,7 @@ def optimize(
         capital=capital,
         end=end,
         mode=mode,
-        inverse=inverse,
-        collection_name=collection_name
+        inverse=inverse
     )
 
     engine.add_strategy(strategy_class, setting)
@@ -1292,8 +1315,7 @@ def _ga_optimize(parameter_values: tuple):
         ga_capital,
         ga_end,
         ga_mode,
-        ga_inverse,
-        ga_collection_name
+        ga_inverse
     )
     return (result[1],)
 
@@ -1310,11 +1332,11 @@ def load_bar_data(
     interval: Interval,
     start: datetime,
     end: datetime,
-    collection_name:str,
+    collection_name:str = None
 ):
     """"""
     return database_manager.load_bar_data(
-        symbol, exchange, interval, start, end, collection_name
+        symbol, exchange, interval, start, end, collection_name = collection_name
     )
 
 
@@ -1324,11 +1346,11 @@ def load_tick_data(
     exchange: Exchange,
     start: datetime,
     end: datetime,
-    collection_name:str,
+    collection_name:str = None
 ):
     """"""
     return database_manager.load_tick_data(
-        symbol, exchange, start, end,collection_name
+        symbol, exchange, start, end, collection_name = collection_name
     )
 
 
@@ -1346,4 +1368,3 @@ ga_slippage = None
 ga_size = None
 ga_pricetick = None
 ga_capital = None
-ga_collection_name = None

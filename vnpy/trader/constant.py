@@ -95,8 +95,12 @@ class Exchange(Enum):
     NYSE = "NYSE"           # New York Stock Exchnage
     NASDAQ = "NASDAQ"       # Nasdaq Exchange
     ARCA = "ARCA"           # ARCA Exchange
+    EDGEA = "EDGEA"         # Direct Edge Exchange
+    ISLAND = "ISLAND"       # Nasdaq Island ECN
+    BATS = "BATS"           # Bats Global Markets
+    IEX = "IEX"             # The Investors Exchange
     NYMEX = "NYMEX"         # New York Mercantile Exchange
-    COMEX = "COMEX"         # a division of theNew York Mercantile Exchange
+    COMEX = "COMEX"         # COMEX of CME
     GLOBEX = "GLOBEX"       # Globex of CME
     IDEALPRO = "IDEALPRO"   # Forex ECN of Interactive Brokers
     CME = "CME"             # Chicago Mercantile Exchange
@@ -116,10 +120,8 @@ class Exchange(Enum):
     TOCOM = "TOCOM"         # Tokyo Commodity Exchange
     EUNX = "EUNX"           # Euronext Exchange
     KRX = "KRX"             # Korean Exchange
-
-    OANDA = "OANDA"         # oanda.com
-    TSE = "TSE"             # Taiwan Stock Exchange
-    TFE = "TFE"             # Taiwan Futures Exchange
+    OTC = "OTC"             # OTC Product (Forex/CFD/Pink Sheet Equity)
+    IBKRATS = "IBKRATS"     # Paper Trading Exchange of IB
 
     # CryptoCurrency
     BITMEX = "BITMEX"
@@ -136,7 +138,10 @@ class Exchange(Enum):
     # Special Function
     LOCAL = "LOCAL"         # For local generated data
 
-
+    OANDA = "OANDA"         # oanda.com
+    TSE = "TSE"             # Taiwan Stock Exchange
+    TFE = "TFE"             # Taiwan Futures Exchange
+    
 class Currency(Enum):
     """
     Currency.
@@ -154,3 +159,4 @@ class Interval(Enum):
     HOUR = "1h"
     DAILY = "d"
     WEEKLY = "w"
+    TICK = "tick"
