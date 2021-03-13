@@ -624,7 +624,8 @@ class BacktestingEngine:
                 self.capital,
                 self.end,
                 self.mode,
-                self.inverse
+                self.inverse,
+                self.collection_name
             )))
             results.append(result)
 
@@ -768,7 +769,7 @@ class BacktestingEngine:
 
         for parameter_values in hof:
             setting = dict(parameter_values)
-            target_value = ga_optimize(parameter_values)[0]
+            target_value = ga_optimize(parameter_values, self.collection_name)[0]
             results.append((setting, target_value, {}))
 
         return results
@@ -1265,7 +1266,8 @@ def optimize(
     capital: int,
     end: datetime,
     mode: BacktestingMode,
-    inverse: bool
+    inverse: bool,
+    colleciton_name:str = None
 ):
     """
     Function for running in multiprocessing.pool
@@ -1283,7 +1285,8 @@ def optimize(
         capital=capital,
         end=end,
         mode=mode,
-        inverse=inverse
+        inverse=inverse,
+        collection_name=colleciton_name
     )
 
     engine.add_strategy(strategy_class, setting)
@@ -1297,7 +1300,7 @@ def optimize(
 
 
 @lru_cache(maxsize=1000000)
-def _ga_optimize(parameter_values: tuple):
+def _ga_optimize(parameter_values: tuple, collection_name:str=None):
     """"""
     setting = dict(parameter_values)
 
@@ -1315,14 +1318,15 @@ def _ga_optimize(parameter_values: tuple):
         ga_capital,
         ga_end,
         ga_mode,
-        ga_inverse
+        ga_inverse,
+        collection_name
     )
     return (result[1],)
 
 
-def ga_optimize(parameter_values: list):
+def ga_optimize(parameter_values: list, collection_name:str=None):
     """"""
-    return _ga_optimize(tuple(parameter_values))
+    return _ga_optimize(tuple(parameter_values), collection_name)
 
 
 @lru_cache(maxsize=999)
