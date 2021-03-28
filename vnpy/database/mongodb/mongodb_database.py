@@ -118,7 +118,7 @@ class DbBarOverview(Document):
     meta = {
         "indexes": [
             {
-                "fields": ("symbol", "exchange", "interval"),
+                "fields": ("symbol", "exchange", "interval", "datetime"),
                 "unique": True,
             }
         ],
@@ -383,6 +383,7 @@ class MongodbDatabase(BaseDatabase):
                         "symbol": "$symbol",
                         "exchange": "$exchange",
                         "interval": "$interval",
+                        "datetime": "$datetime",
                     },
                     "count": {"$sum": 1}
                 }
@@ -396,6 +397,7 @@ class MongodbDatabase(BaseDatabase):
             overview.symbol = id_data["symbol"]
             overview.exchange = id_data["exchange"]
             overview.interval = id_data["interval"]
+            overview.datetime = id_data["datetime"]
             overview.count = d["count"]
 
             start_bar: DbBarData = (
@@ -403,6 +405,7 @@ class MongodbDatabase(BaseDatabase):
                     symbol=id_data["symbol"],
                     exchange=id_data["exchange"],
                     interval=id_data["interval"],
+                    datetime=id_data["datetime"],
                 )
                 .order_by("+datetime")
                 .first()
@@ -414,6 +417,7 @@ class MongodbDatabase(BaseDatabase):
                     symbol=id_data["symbol"],
                     exchange=id_data["exchange"],
                     interval=id_data["interval"],
+                    datetime=id_data["datetime"],
                 )
                 .order_by("-datetime")
                 .first()
