@@ -118,7 +118,7 @@ class DbBarOverview(Document):
     meta = {
         "indexes": [
             {
-                "fields": ("symbol", "exchange", "interval", "datetime"),
+                "fields": ("symbol", "exchange", "interval"),
                 "unique": True,
             }
         ],
@@ -153,16 +153,11 @@ class MongodbDatabase(BaseDatabase):
 
     def save_bar_data(self, bars: List[BarData], collection_name: str = None) -> bool:
         """"""
-        # Store key parameters
-        bar = bars[0]
-        symbol = bar.symbol
-        exchange = bar.exchange
-        interval = bar.interval
 
         # Upsert data into mongodb
         for bar in bars:
-            bar.datetime = convert_tz(bar.datetime)
-
+            bar.datetime = convert_tz(bar.datetime)            
+            
             d = bar.__dict__
             d["exchange"] = d["exchange"].value
             d["interval"] = d["interval"].value
@@ -177,49 +172,45 @@ class MongodbDatabase(BaseDatabase):
                     datetime=d["datetime"],
                 ).update_one(upsert=True, **param)
             else:
-                with switch_collection(DbBarData, collection_name):
+                 with switch_collection(DbBarData, collection_name):
                     DbBarData.objects(
                     symbol=d["symbol"],
                     exchange=d["exchange"],
                     interval=d["interval"],
                     datetime=d["datetime"],
-                ).update_one(upsert=True, **param)
-        # Update bar overview
-        try:
-            if not collection_name:
+                    ).update_one(upsert=True, **param)
+                
+            # Update bar overview
+            symbol = bar.symbol
+            exchange = bar.exchange
+            interval = bar.interval
+            try:
                 overview: DbBarOverview = DbBarOverview.objects(
                     symbol=symbol,
-                    exchange=exchange.value,
-                    interval=interval.value
+                    exchange=exchange if isinstance(exchange, str) else exchange.value,
+                    interval=interval if isinstance(interval, str) else interval.value,
                 ).get()
-            else:
-                with switch_collection(DbBarOverview, collection_name):
-                    overview: DbBarOverview = DbBarOverview.objects(
+            except DoesNotExist:
+                overview: DbBarOverview = DbBarOverview(
                     symbol=symbol,
-                    exchange=exchange.value,
-                    interval=interval.value
-                ).get()
-        except DoesNotExist:
-            overview: DbBarOverview = DbBarOverview(
-                symbol=symbol,
-                exchange=exchange.value,
-                interval=interval.value
-            )
+                    exchange=exchange if isinstance(exchange, str) else exchange.value,
+                    interval=interval if isinstance(interval, str) else interval.value,
+                )
 
-        if not overview.start:
-            overview.start = bars[0].datetime
-            overview.end = bars[-1].datetime
-            overview.count = len(bars)
-        else:
-            overview.start = min(bars[0].datetime, overview.start)
-            overview.end = max(bars[-1].datetime, overview.end)
-            overview.count = DbBarData.objects(
-                symbol=symbol,
-                exchange=exchange.value,
-                interval=interval.value
-            ).count()
+            if not overview.start:
+                overview.start = bars[0].datetime
+                overview.end = bars[-1].datetime
+                overview.count = len(bars)
+            else:
+                overview.start = min(bars[0].datetime, overview.start)
+                overview.end = max(bars[-1].datetime, overview.end)
+                overview.count = DbBarData.objects(
+                    symbol=symbol,
+                    exchange=exchange if isinstance(exchange, str) else exchange.value,
+                    interval=interval if isinstance(interval, str) else interval.value,
+                ).count()
 
-        overview.save()
+            overview.save()
 
     def save_tick_data(self, ticks: List[TickData], collection_name: str = None) -> bool:
         """"""
