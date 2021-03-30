@@ -153,7 +153,7 @@ class MongodbDatabase(BaseDatabase):
 
     def save_bar_data(self, bars: List[BarData], collection_name: str = None) -> bool:
         """"""
-
+        OverView_dict = {}    
         # Upsert data into mongodb
         for bar in bars:
             bar.datetime = convert_tz(bar.datetime)            
@@ -179,11 +179,35 @@ class MongodbDatabase(BaseDatabase):
                     interval=d["interval"],
                     datetime=d["datetime"],
                     ).update_one(upsert=True, **param)
-                
+            
+            # Save info of bar
+            if bar.symbol in OverView_dict.keys():
+                OverView_dict.update({bar.symbol:{
+                    'exchange' : bar.exchange,
+                    'interval' : bar.interval,
+                    'start' : min(bar.datetime, OverView_dict[bar.symbol]['start']),
+                    'end': max(bar.datetime, OverView_dict[bar.symbol]['end']),
+                    'count':OverView_dict[bar.symbol]['count'] + 1,
+                }})
+            else:
+                OverView_dict.update({bar.symbol:{
+                    'exchange' : bar.exchange,
+                    'interval' : bar.interval,
+                    'start' : bar.datetime,
+                    'end': bar.datetime,
+                    'count':0,
+                }})
+        self.UpdateBarOverview(OverView_dict)
+        
+    def UpdateBarOverview(self, overview:dict) -> None:
+        for symbol, value in overview.items():
             # Update bar overview
-            symbol = bar.symbol
-            exchange = bar.exchange
-            interval = bar.interval
+            # symbol = bar.symbol
+            exchange = value['exchange']
+            interval = value['interval']
+            start = value['start']
+            end = value['end']
+            cnt = value['count']
             try:
                 overview: DbBarOverview = DbBarOverview.objects(
                     symbol=symbol,
@@ -198,12 +222,12 @@ class MongodbDatabase(BaseDatabase):
                 )
 
             if not overview.start:
-                overview.start = bars[0].datetime
-                overview.end = bars[-1].datetime
-                overview.count = len(bars)
+                overview.start = start
+                overview.end = end
+                overview.count = cnt # len(bars)
             else:
-                overview.start = min(bars[0].datetime, overview.start)
-                overview.end = max(bars[-1].datetime, overview.end)
+                overview.start = min(start, overview.start)
+                overview.end = max(end, overview.end)
                 overview.count = DbBarData.objects(
                     symbol=symbol,
                     exchange=exchange if isinstance(exchange, str) else exchange.value,
