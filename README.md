@@ -90,7 +90,7 @@ VNPY 僅支援python 64bits 3.7+，先安裝好 Python(Anaconda) 虛擬環境
 > 1. Install VNPY
 >
 >    1. Window
-> 
+>
 >       ```powershell
 >        (vnpy_env) C:\Users\xiqi\vnpy_demo\vnpy>install.bat
 >       ```
@@ -100,12 +100,13 @@ VNPY 僅支援python 64bits 3.7+，先安裝好 Python(Anaconda) 虛擬環境
 >       ```powershell
 >       (vnpy_env) C:\Users\xiqi\vnpy_demo\vnpy>./install.sh
 >       ```
-> 
->   3. OSX
-> 
->      ```powershell
->       (vnpy_env) USERNAMEAir:vnpy xiqi>./install_osx.sh
->      ```
+>       
+>      3. OSX
+>
+>         ```powershell
+>         (vnpy_env) USERNAMEAir:vnpy xiqi>chmod +x ./install_osx.sh (第一次使用才需要，之這句話不要放進去)
+>         (vnpy_env) USERNAMEAir:vnpy xiqi>./install_osx.sh
+>         ```
 
 ## VNPY執行
 
@@ -132,6 +133,7 @@ VNPY 僅支援python 64bits 3.7+，先安裝好 Python(Anaconda) 虛擬環境
 >    3. OSX
 >
 >       ```powershell
+>       (vnpy_env) USERNAMEAir:vnpy xiqi>chmod +x ./run_osx.sh (第一次使用才需要，之這句話不要放進去)
 >       (vnpy_env) USERNAMEAir:vnpy xiqi>./run_osx.sh
 >       ```
 
@@ -186,5 +188,6 @@ VNPY 僅支援python 64bits 3.7+，先安裝好 Python(Anaconda) 虛擬環境
 >  3. OSX
 >
 >     ```powershell
+>     (vnpy_env) USERNAMEAir:vnpy xiqi>chmod +x ./update_osx.sh (第一次使用才需要，之這句話不要放進去)
 >     (vnpy_env) USERNAMEAir:vnpy xiqi>./update_osx.sh
 >     ```
