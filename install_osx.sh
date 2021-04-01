@@ -30,6 +30,18 @@ ta-lib-exists || install-ta-lib
 # old versions of ta-lib imports numpy in setup.py
 $python -m pip install numpy
 
+# Check if homebrew is installed
+which -s brew
+if [[ $? != 0 ]] ; then
+    # Install Homebrew
+    ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+else
+    brew update
+    
+# Check postgresql is installed
+launchctl load ~/Library/LaunchAgents/homebrew.mxcl.postgresql.plist||brew install postgresql
+
+
 # Install extra packages
 $python -m pip install ta-lib
 $python -m pip install psycopg2-binary
