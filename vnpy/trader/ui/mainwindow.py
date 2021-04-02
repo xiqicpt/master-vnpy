@@ -123,9 +123,14 @@ class MainWindow(QtWidgets.QMainWindow):
             )
 
         # Global setting editor
-        action = QtWidgets.QAction("配置", self)
-        action.triggered.connect(self.edit_global_setting)
-        bar.addAction(action)
+        from platform import system
+        if system() == 'Darwin':
+            setting_menu = bar.addMenu("配置")
+            self.add_menu_action(setting_menu, "全域配置", "about.ico", self.edit_global_setting)
+        else:
+            action = QtWidgets.QAction("配置", self)
+            action.triggered.connect(self.edit_global_setting)
+            bar.addAction(action)
 
         # Help menu
         help_menu = bar.addMenu("帮助")
