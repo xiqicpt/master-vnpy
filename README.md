@@ -136,6 +136,22 @@ VNPY 僅支援python 64bits 3.7+，先安裝好 Python(Anaconda) 虛擬環境
 >       (vnpy_env) USERNAMEAir:vnpy xiqi>chmod +x ./run_osx.sh (第一次使用才需要，之這句話不要放進去)
 >       (vnpy_env) USERNAMEAir:vnpy xiqi>./run_osx.sh
 >       ```
+>
+> 3. ### 備註
+>
+>    1. 如果遇到 numpy的 valueError，請執行 :
+>
+>       ```powershell
+>       pip install -U numpy
+>       ```
+>
+>    2. 如果遇到成功執行沒有報錯，但是GUI並沒有出現的話，請執行 :
+>
+>       ```powershell
+>       pip install -U PyQt5==5.15.2
+>       ```
+>
+>       
 
 - 選擇Sinopac Gateway
 
