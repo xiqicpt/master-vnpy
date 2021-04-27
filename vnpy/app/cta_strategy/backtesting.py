@@ -7,6 +7,7 @@ from time import time
 import multiprocessing
 import random
 import traceback
+from platform import system
 
 import numpy as np
 from pandas import DataFrame
@@ -587,7 +588,10 @@ class BacktestingEngine:
         fig.add_trace(pnl_histogram, row=4, col=1)
 
         fig.update_layout(height=1000, width=1000)
-        fig.show()
+        if system() == 'Linux':
+            fig.show(renderer="iframe")
+        else:
+            fig.show()
 
     def run_optimization(self, optimization_setting: OptimizationSetting, output=True):
         """"""
