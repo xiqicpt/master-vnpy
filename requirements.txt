@@ -11,7 +11,7 @@ pymysql
 psycopg2-binary
 mongoengine
 numpy==1.19.3
-pandas
+pandas==1.2.5
 matplotlib
 seaborn
 PyCryptodome==3.9.9
@@ -32,3 +32,4 @@ Shioaji
 jupyter
 notebook
 jupyter_contrib_nbextensions
+tzlocal==2.1
