@@ -1,6 +1,0 @@
-[E 2021-03-13 13:26:03,155 I:\py-envs\vnpy_2_1_9\lib\site-packages\shioaji\utils.py:42:raise_resp_error] {'status': {'status_code': 500}, 'response': {'detail': 'Internal Server Error'}}
-[E 2021-03-13 13:26:34,195 I:\py-envs\vnpy_2_1_9\lib\site-packages\shioaji\utils.py:42:raise_resp_error] {'status': {'status_code': 500}, 'response': {'detail': 'Internal Server Error'}}
-[E 2021-03-13 13:27:14,269 I:\py-envs\vnpy_2_1_9\lib\site-packages\shioaji\utils.py:42:raise_resp_error] {'status': {'status_code': 500}, 'response': {'detail': 'Internal Server Error'}}
-[E 2021-03-13 13:27:54,329 I:\py-envs\vnpy_2_1_9\lib\site-packages\shioaji\utils.py:42:raise_resp_error] {'status': {'status_code': 500}, 'response': {'detail': 'Internal Server Error'}}
-[E 2021-03-13 13:28:34,358 I:\py-envs\vnpy_2_1_9\lib\site-packages\shioaji\utils.py:42:raise_resp_error] {'status': {'status_code': 500}, 'response': {'detail': 'Internal Server Error'}}
-[E 2021-03-13 13:29:14,396 I:\py-envs\vnpy_2_1_9\lib\site-packages\shioaji\utils.py:42:raise_resp_error] {'status': {'status_code': 500}, 'response': {'detail': 'Internal Server Error'}}
