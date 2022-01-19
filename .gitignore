@@ -38,7 +38,10 @@ _templates
 Chapter Examples
 install.sh
 install_osx.sh
+run.sh
+run_osx.sh
+update.sh
+update_osx.sh
 README_Full.md
-CHANGELOG.md
 shioaji.log
 debug.log
