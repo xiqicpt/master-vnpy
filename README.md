@@ -71,17 +71,6 @@ VNPY 僅支援python 64bits 3.7+，先安裝好 Python(Anaconda) 虛擬環境
 >    2. C++安裝完成後，可直接進入[VNPY安裝](#VNPY安裝)
 >    3. [Python 非官方套件 (.whl)](https://www.lfd.uci.edu/~gohlke/pythonlibs/#ta-lib)
 >
-> 2. Linux -> [使用sudo](https://gist.github.com/brunocapelao/ed1b4f566fccf630e1fb749e5992e964)
->
-> 3. OSX
->
->    ```powershell
->    brew install talib
->    ```
->
->    ```powershell
->    pip install Ta-Lib
->    ```
 
 ## VNPY安裝
 
@@ -95,18 +84,6 @@ VNPY 僅支援python 64bits 3.7+，先安裝好 Python(Anaconda) 虛擬環境
 >        (vnpy_env) C:\Users\xiqi\vnpy_demo\vnpy>install.bat
 >       ```
 >
->    2. Linux
->
->       ```powershell
->       (vnpy_env) C:\Users\xiqi\vnpy_demo\vnpy>./install.sh
->       ```
->       
->      3. OSX
->
->         ```powershell
->         (vnpy_env) USERNAMEAir:vnpy xiqi>chmod +x ./install_osx.sh (第一次使用才需要，之這句話不要放進去)
->         (vnpy_env) USERNAMEAir:vnpy xiqi>./install_osx.sh
->         ```
 
 ## VNPY執行
 
@@ -124,34 +101,21 @@ VNPY 僅支援python 64bits 3.7+，先安裝好 Python(Anaconda) 虛擬環境
 >       (vnpy_env) C:\Users\xiqi\vnpy_demo\vnpy>run.bat
 >       ```
 >
->    2. Linux
->
->       ```powershell
->       (vnpy_env) C:\Users\xiqi\vnpy_demo\vnpy>./run.sh
->       ```
->
->    3. OSX
->
->       ```powershell
->       (vnpy_env) USERNAMEAir:vnpy xiqi>chmod +x ./run_osx.sh (第一次使用才需要，之這句話不要放進去)
->       (vnpy_env) USERNAMEAir:vnpy xiqi>./run_osx.sh
->       ```
->
 > 3. ### 備註
 >
 >    1. 如果遇到 numpy的 ValueError，請執行如下指令:
->
+> 
 >       ```powershell
->       pip install -U numpy
+>      pip install -U numpy
 >       ```
 >
 >    2. 如果遇到成功執行沒有報錯，但是GUI並沒有出現的話，請執行如下指令 : [Ref](https://www.vnpy.com/forum/topic/6016-macshang-yun-xing-run-pycheng-xu-wu-xiang-ying)
->
+> 
 >       ```powershell
 >       pip install -U PyQt5==5.15.2
->       ```
+>      ```
+> 
 >
->       
 
 - 選擇Sinopac Gateway
 
@@ -161,7 +125,7 @@ VNPY 僅支援python 64bits 3.7+，先安裝好 Python(Anaconda) 虛擬環境
 
   ![GateWay Select](https://github.com/xiqicpt/VNPY-Master/blob/master/Figure/Login.png)
 
-  - 模擬帳號 : PAPIUSER01~10
+  - 模擬帳號 : PAPIUSER01~10 (已撤除，無法使用)
 
   - 密碼共用 : 2222
 
@@ -195,15 +159,3 @@ VNPY 僅支援python 64bits 3.7+，先安裝好 Python(Anaconda) 虛擬環境
 >     (vnpy_env) C:\Users\xiqi\vnpy_demo\vnpy>update.bat
 >     ```
 >
->  2. Linux
->
->     ```powershell
->     (vnpy_env) C:\Users\xiqi\vnpy_demo\vnpy>./update.sh
->     ```
->
->  3. OSX
->
->     ```powershell
->     (vnpy_env) USERNAMEAir:vnpy xiqi>chmod +x ./update_osx.sh (第一次使用才需要，之這句話不要放進去)
->     (vnpy_env) USERNAMEAir:vnpy xiqi>./update_osx.sh
->     ```
